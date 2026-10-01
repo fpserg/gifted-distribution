@@ -1,0 +1,325 @@
+<title>Раздача GIFTED</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: одна колонка-«ведомость». Сверху ввод, ниже результат парами: ник | сумма, у каждого своё поле и кнопка копирования. */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --fg:#14202e; --muted:#5d6b7c; --line:#d9dfe7;
+  --accent:#0b63e5; --accent-fg:#ffffff; --accent-soft:#e4eeff;
+  --good:#12805c; --warn:#a15c00; --warn-soft:#fff2dc; --bad:#b3261e; --bad-soft:#fde8e6;
+  --field:#f8fafc;
+  --font-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-num:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e141c; --surface:#161f2a; --fg:#e6edf5; --muted:#92a1b3; --line:#27333f;
+    --accent:#5b9bff; --accent-fg:#06121f; --accent-soft:#17283f;
+    --good:#4cc79b; --warn:#f0b24d; --warn-soft:#2e2412; --bad:#ff8a80; --bad-soft:#331a18;
+    --field:#101821; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e141c; --surface:#161f2a; --fg:#e6edf5; --muted:#92a1b3; --line:#27333f;
+  --accent:#5b9bff; --accent-fg:#06121f; --accent-soft:#17283f;
+  --good:#4cc79b; --warn:#f0b24d; --warn-soft:#2e2412; --bad:#ff8a80; --bad-soft:#331a18;
+  --field:#101821; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:640px;margin-inline:auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-direction:column;gap:6px}
+h1{font-size:26px;line-height:1.15;margin:0;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);margin:0;max-width:60ch}
+.token{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:var(--font-num);font-size:12px;color:var(--muted)}
+.token b{font-family:var(--font-body);font-weight:600;color:var(--fg);letter-spacing:.06em;text-transform:uppercase;font-size:11px}
+.token code{overflow-wrap:anywhere;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:14px}
+label,.lbl{font-weight:600;font-size:13px}
+.hint{color:var(--muted);font-size:13px;margin:0}
+textarea,input,select{width:100%;font:inherit;color:var(--fg);background:var(--field);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+textarea{font-family:var(--font-num);font-size:12.5px;line-height:1.55;min-height:150px;resize:vertical;white-space:pre;overflow-x:auto}
+input.num{font-family:var(--font-num)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+@media (max-width:420px){.row{grid-template-columns:1fr}}
+.btn{font:inherit;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--accent-fg);border-radius:8px;padding:11px 16px;cursor:pointer}
+.btn:disabled{opacity:.6;cursor:progress}
+.btn.ghost{background:transparent;color:var(--accent)}
+details summary{cursor:pointer;color:var(--muted);font-size:13px}
+details .field{margin-top:8px}
+.notice{border-radius:8px;padding:10px 12px;font-size:13.5px;border:1px solid var(--line)}
+.notice.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.notice.err{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.notice.info{background:var(--accent-soft);color:var(--fg);border-color:transparent}
+.notice ul{margin:6px 0 0;padding-left:18px}
+.res-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.res-head h2{font-size:17px;margin:0}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+@media (max-width:420px){.item{grid-template-columns:1fr}}
+.cell{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:8px;background:var(--field);min-width:0}
+.cell .v{flex:1;min-width:0;padding:9px 11px;font-family:var(--font-num);font-size:14px;overflow-wrap:anywhere;user-select:all}
+.cell.amt .v{font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+.cp{border:0;border-left:1px solid var(--line);background:transparent;color:var(--accent);font:inherit;font-size:12px;font-weight:600;padding:0 11px;cursor:pointer;border-radius:0 8px 8px 0;min-width:44px}
+.cp.done{color:var(--good)}
+.meta{grid-column:1/-1;color:var(--muted);font-size:12px;font-family:var(--font-num);display:flex;gap:12px;flex-wrap:wrap;margin-top:-4px}
+.total{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:12px;font-size:13.5px;color:var(--muted);flex-wrap:wrap}
+.total b{color:var(--fg);font-family:var(--font-num);font-weight:500}
+.empty{color:var(--muted);font-size:14px;margin:0}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Раздача GIFTED</h1>
+    <p class="sub">Вставьте ники и кошельки TON и сумму. Сумма делится пропорционально балансам токена GIFTED на этих кошельках.</p>
+    <div class="token"><b>Токен</b><code id="jet">EQBenxtNSmGFbV8icHxXpSXk2NtpVsyb-JE0CZtBvIA6H1Nh</code></div>
+  </header>
+
+  <section class="card">
+    <div class="field">
+      <label for="inp">Участники</label>
+      <textarea id="inp" spellcheck="false" wrap="off" autocomplete="off">@arkadii999: UQAf87rOBq2XG0KceE_Q_iVD-jVEKuGcDtaRzTtAvtN2IgjN
+@io_368: UQBtzPKzjHGvDrN6giBXZeejGy_SXV9w3IxGIfbc-JaMgAJ5</textarea>
+      <p class="hint">Одна строка: ник, двоеточие, кошелёк. Если баланс уже известен, допишите его после кошелька через пробел, и он не будет запрашиваться.</p>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="amt">Сумма к раздаче</label>
+        <input id="amt" class="num" inputmode="decimal" value="47618,7" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="dec">Знаков после запятой</label>
+        <select id="dec">
+          <option>0</option><option>1</option><option selected>2</option><option>4</option><option>6</option><option>9</option>
+        </select>
+      </div>
+    </div>
+    <details>
+      <summary>Ключ tonapi (необязательно)</summary>
+      <div class="field">
+        <label for="key">API-ключ</label>
+        <input id="key" type="password" autocomplete="off" placeholder="Нужен, если запросов много и сервис отвечает ошибкой лимита">
+      </div>
+    </details>
+    <button class="btn" id="go" type="button">Рассчитать</button>
+    <div id="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <section class="card" id="out">
+    <div class="res-head"><h2>Результат</h2><button class="btn ghost" id="copyAll" type="button" hidden>Скопировать всё</button></div>
+    <div id="list" class="list"><p class="empty">Здесь появятся ники и суммы. У каждого значения своя кнопка копирования.</p></div>
+    <div class="total" id="total" hidden></div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var JETTON = "EQBenxtNSmGFbV8icHxXpSXk2NtpVsyb-JE0CZtBvIA6H1Nh";
+  var P = 18n; // внутренний масштаб балансов
+  var $ = function(id){return document.getElementById(id)};
+  var WALLET = /(?:UQ|EQ|kQ|0Q)[A-Za-z0-9_-]{46}|0:[0-9a-fA-F]{64}/;
+
+  function pow10(n){ return 10n ** BigInt(n); }
+
+  function parseDec(str, p){
+    var s = String(str).replace(/[\s  ]/g,"").replace(",",".");
+    if(!/^\d+(\.\d+)?$/.test(s)) return null;
+    var parts = s.split(".");
+    var frac = (parts[1]||"");
+    if(frac.length > p) frac = frac.slice(0,p);
+    while(frac.length < p) frac += "0";
+    return BigInt(parts[0] + frac);
+  }
+
+  function fmt(units, p){
+    var neg = units < 0n; if(neg) units = -units;
+    var s = units.toString();
+    if(p === 0) return (neg?"-":"")+s;
+    while(s.length <= p) s = "0"+s;
+    var i = s.slice(0, s.length-p), f = s.slice(s.length-p).replace(/0+$/,"");
+    return (neg?"-":"") + i + (f ? ","+f : "");
+  }
+
+  function parseInput(text){
+    var rows = [], errors = [], amountLine = null;
+    text.split(/\r?\n/).forEach(function(raw, idx){
+      var line = raw.trim(); if(!line) return;
+      var m = line.match(WALLET);
+      if(!m){
+        if(parseDec(line, 0) !== null || parseDec(line, 9) !== null){ amountLine = line; return; }
+        errors.push("Строка "+(idx+1)+": не найден кошелёк.");
+        return;
+      }
+      var nick = line.slice(0, m.index).replace(/[\s:;,\-–—|]+$/,"").replace(/^[\s]+/,"");
+      var rest = line.slice(m.index + m[0].length).trim();
+      var bal = null;
+      if(rest){
+        bal = parseDec(rest, Number(P));
+        if(bal === null){ errors.push("Строка "+(idx+1)+": не удалось прочитать баланс «"+rest+"»."); return; }
+      }
+      if(!nick){ errors.push("Строка "+(idx+1)+": нет ника перед кошельком."); return; }
+      rows.push({nick:nick, wallet:m[0], bal:bal});
+    });
+    return {rows:rows, errors:errors, amountLine:amountLine};
+  }
+
+  var sleep = function(ms){return new Promise(function(r){setTimeout(r,ms)})};
+
+  async function fetchBalance(wallet, key){
+    var url = "https://tonapi.io/v2/accounts/"+encodeURIComponent(wallet)+"/jettons/"+JETTON;
+    for(var attempt=0; attempt<4; attempt++){
+      var headers = {"Accept":"application/json"};
+      if(key) headers["Authorization"] = "Bearer "+key;
+      var r = await fetch(url, {headers:headers});
+      if(r.status === 429){ await sleep(1300*(attempt+1)); continue; }
+      if(r.status === 404) return 0n;
+      if(!r.ok){
+        var e = new Error("HTTP "+r.status); e.http = r.status; throw e;
+      }
+      var j = await r.json();
+      var raw = BigInt(j.balance || "0");
+      var d = (j.jetton && j.jetton.decimals != null) ? Number(j.jetton.decimals) : 9;
+      if(d <= Number(P)) return raw * pow10(Number(P)-d);
+      return raw / pow10(d-Number(P));
+    }
+    var e2 = new Error("HTTP 429"); e2.http = 429; throw e2;
+  }
+
+  function setStatus(kind, html){
+    var el = $("status");
+    el.innerHTML = html ? '<div class="notice '+kind+'">'+html+'</div>' : "";
+  }
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+  function distribute(total, bals){
+    var sum = bals.reduce(function(a,b){return a+b},0n);
+    var shares = bals.map(function(){return 0n});
+    if(sum === 0n) return {shares:shares, sum:sum};
+    var rem = [], given = 0n;
+    bals.forEach(function(b,i){
+      var num = total*b;
+      shares[i] = num / sum; rem.push({i:i, r:num % sum}); given += shares[i];
+    });
+    var left = total - given;
+    rem.sort(function(a,b){return a.r>b.r?-1:a.r<b.r?1:0});
+    for(var k=0; left>0n && k<rem.length; k++, left--) shares[rem[k].i] += 1n;
+    return {shares:shares, sum:sum};
+  }
+
+  var lastText = "";
+
+  function flash(btn){
+    var t = btn.textContent; btn.textContent = "Готово"; btn.classList.add("done");
+    setTimeout(function(){btn.textContent = t; btn.classList.remove("done")}, 1200);
+  }
+  function selectEl(el){
+    var rg = document.createRange(); rg.selectNodeContents(el);
+    var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(rg);
+  }
+  function copyText(text, btn, srcEl){
+    function fallback(){
+      if(srcEl){ selectEl(srcEl); try{ document.execCommand("copy"); flash(btn); return; }catch(e){} }
+      btn.textContent = "Выделено";
+    }
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){flash(btn)}, fallback);
+      } else fallback();
+    }catch(e){ fallback(); }
+  }
+
+  function cell(value, cls){
+    var c = document.createElement("div"); c.className = "cell "+cls;
+    var v = document.createElement("div"); v.className = "v"; v.textContent = value;
+    var b = document.createElement("button"); b.type = "button"; b.className = "cp"; b.textContent = "Копия";
+    b.setAttribute("aria-label", "Скопировать "+value);
+    b.addEventListener("click", function(){copyText(value, b, v)});
+    c.appendChild(v); c.appendChild(b); return c;
+  }
+
+  function render(items, p, total, sum){
+    var list = $("list"); list.innerHTML = "";
+    items.forEach(function(it){
+      var wrap = document.createElement("div"); wrap.className = "item";
+      wrap.appendChild(cell(it.nick, "nick"));
+      wrap.appendChild(cell(fmt(it.share, p), "amt"));
+      var meta = document.createElement("div"); meta.className = "meta";
+      var pct = sum > 0n ? Number(it.bal*10000n/sum)/100 : 0;
+      meta.textContent = "баланс "+fmt(it.bal, Number(P)).replace(/(,\d{4})\d+/, "$1")+" · доля "+String(pct).replace(".",",")+"%";
+      wrap.appendChild(meta);
+      list.appendChild(wrap);
+    });
+    var given = items.reduce(function(a,it){return a+it.share},0n);
+    var t = $("total"); t.hidden = false;
+    t.innerHTML = '<span>Раздано</span><b>'+esc(fmt(given,p))+' из '+esc(fmt(total,p))+'</b>';
+    var ca = $("copyAll"); ca.hidden = false;
+    lastText = items.map(function(it){return it.nick+": "+fmt(it.share,p)}).join("\n");
+  }
+
+  async function run(){
+    var btn = $("go"); setStatus("","");
+    var parsed = parseInput($("inp").value);
+    var p = Number($("dec").value);
+    var amtStr = $("amt").value.trim() || parsed.amountLine || "";
+    var total = parseDec(amtStr, p);
+    var problems = parsed.errors.slice();
+    if(total === null) problems.push("Введите сумму к раздаче числом, например 47618,7.");
+    if(!parsed.rows.length) problems.push("Добавьте хотя бы одного участника.");
+    if(problems.length){
+      setStatus("err", "<ul>"+problems.map(function(x){return "<li>"+esc(x)+"</li>"}).join("")+"</ul>");
+      return;
+    }
+    // объединяем строки с одним ником
+    var byNick = {}, order = [];
+    parsed.rows.forEach(function(r){
+      var k = r.nick.toLowerCase();
+      if(!byNick[k]){ byNick[k] = {nick:r.nick, wallets:[]}; order.push(k); }
+      byNick[k].wallets.push(r);
+    });
+    var need = parsed.rows.filter(function(r){return r.bal === null});
+    btn.disabled = true;
+    var key = $("key").value.trim();
+    var failedNet = false, failedList = [];
+    for(var i=0;i<need.length;i++){
+      setStatus("info","Запрашиваю балансы: "+(i+1)+" из "+need.length+"…");
+      try{
+        need[i].bal = await fetchBalance(need[i].wallet, key);
+      }catch(e){
+        if(e instanceof TypeError){ failedNet = true; break; }
+        failedList.push(need[i].nick+" ("+e.message+")");
+      }
+      if(i < need.length-1) await sleep(key ? 100 : 1100);
+    }
+    btn.disabled = false;
+    if(failedNet){
+      setStatus("warn", "Эта страница не может обращаться к сети из текущего окна, поэтому балансы не загрузились. Откройте файл страницы в браузере или впишите баланс после каждого кошелька через пробел и нажмите «Рассчитать» ещё раз.");
+      return;
+    }
+    if(failedList.length){
+      setStatus("err", "Не удалось получить баланс: "+esc(failedList.join(", "))+". Повторите попытку позже или добавьте ключ tonapi.");
+      return;
+    }
+    var items = order.map(function(k){
+      var g = byNick[k];
+      var b = g.wallets.reduce(function(a,w){return a + (w.bal||0n)},0n);
+      return {nick:g.nick, bal:b, share:0n};
+    });
+    var d = distribute(total, items.map(function(x){return x.bal}));
+    items.forEach(function(it,i){it.share = d.shares[i]});
+    if(d.sum === 0n){
+      render(items, p, total, d.sum);
+      setStatus("warn","У всех указанных кошельков нулевой баланс GIFTED, делить нечего.");
+      return;
+    }
+    render(items, p, total, d.sum);
+    var dup = parsed.rows.length - order.length;
+    setStatus(dup ? "info" : "", dup ? "Строки с одинаковым ником объединены, их балансы сложены." : "");
+  }
+
+  $("go").addEventListener("click", run);
+  $("copyAll").addEventListener("click", function(){ copyText(lastText, this, null); });
+})();
+</script>
